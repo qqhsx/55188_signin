@@ -1,0 +1,28 @@
+name: Auto Sign-in for BBS
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # 每天上午8点运行（UTC时间）
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  sign_in_job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+
+      - name: Run sign-in script
+        env:
+          MY_COOKIE: ${{ secrets.MY_COOKIE }}
+        run: python 55188_signin.py  # 脚本名
