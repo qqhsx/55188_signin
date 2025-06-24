@@ -32,6 +32,8 @@ Value: 粘贴刚才的 Cookie
 
 点击上方 Actions
 
+首次 Fork 在 Actions 页面点击 Enable workflows 以启用自动任务。
+
 选择 Auto Sign-in for BBS
 
 点击右侧 Run workflow → 等待运行完成
