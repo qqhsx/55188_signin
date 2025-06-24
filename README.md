@@ -37,3 +37,5 @@ Value: 粘贴刚才的 Cookie
 选择 Auto Sign-in for BBS
 
 点击右侧 Run workflow → 等待运行完成
+
+# 温馨提示：如果提示“登录失效”，请重新从浏览器复制 Cookie 并更新 GitHub Secrets
