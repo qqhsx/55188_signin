@@ -2,7 +2,7 @@ name: Auto Sign-in for BBS
 
 on:
   schedule:
-    - cron: '00 23 * * *'
+    - cron: '00 23 * * *'  # 每天上午8点运行
   workflow_dispatch:  # 允许手动触发
 
 jobs:
@@ -25,4 +25,7 @@ jobs:
       - name: Run sign-in script
         env:
           MY_COOKIE: ${{ secrets.MY_COOKIE }}
+          WX_CORPID: ${{ secrets.WX_CORPID }}
+          WX_CORPSECRET: ${{ secrets.WX_CORPSECRET }}
+          WX_AGENTID: ${{ secrets.WX_AGENTID }}
         run: python 55188_signin.py  # 脚本名
