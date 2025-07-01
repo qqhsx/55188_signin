@@ -28,6 +28,21 @@ Name: MY_COOKIE
 
 Value: 粘贴刚才的 Cookie
 
+### 下面为企业微信消息推送（选填）
+
+Name: WX_AGENTID
+
+Value:填你的企业微信应用ID
+
+Name: WX_CORPID
+
+Value:填你的企业微信ID
+
+Name: WX_CORPSECRET
+
+Value:填你的企业微信应用密钥
+
+
 ✅ 第三步：测试运行
 
 点击上方 Actions
