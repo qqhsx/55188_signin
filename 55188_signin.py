@@ -1,6 +1,11 @@
 import requests
 import time
 import os
+from wx_msg import send_wx  # 导入推送函数
+
+corpid = os.getenv("WX_CORPID") or ""
+corpsecret = os.getenv("WX_CORPSECRET") or ""
+agentid = os.getenv("WX_AGENTID") or ""
 
 def sign_in(cookie_str):
     session = requests.Session()
@@ -14,42 +19,46 @@ def sign_in(cookie_str):
     })
     session.cookies.update(dict(i.strip().split("=", 1) for i in cookie_str.split(";") if "=" in i))
 
-    # 1️⃣ 访问签到页，保留 server-set cookie
     r1 = session.get("https://www.55188.com/plugin.php?id=sign")
     r1.encoding = r1.apparent_encoding
     html = r1.text
 
-    # 判断登录、签到状态
     if '您好，游客！' in html or '安全验证' in html:
-        print("❌ 登录失效")
+        msg = "55188 签到通知：❌ 登录失效，请检查Cookie"
+        print(msg)
+        send_wx(msg, corpid, corpsecret, agentid)
         return
+
     print("✅ 登录成功")
     signed = 'id="addsign"' not in html
     if signed:
-        print("✅ 今天已签到")
+        msg = "55188 签到通知：✅ 今天已签到，无需重复操作。"
+        print(msg)
+        send_wx(msg, corpid, corpsecret, agentid)
         return
-    print("❌ 今天还未签到")
 
-    # 这里只简单延迟
+    print("❌ 今天还未签到，准备签到...")
     time.sleep(1)
 
-    # 3️⃣ 发起签到请求
     r2 = session.get("https://www.55188.com/plugin.php?id=sign&mod=add&jump=1")
     r2.encoding = r2.apparent_encoding
-    # print("✉️签到接口 response 状态码", r2.status_code)
-    # print("✉️签到接口 response 前500字符：")
-    # print(r2.text[:500])
 
     if 'success' in r2.text:
-        print("🎉 签到成功！")
+        msg = "55188 签到通知：🎉 签到成功！"
+        print(msg)
+        send_wx(msg, corpid, corpsecret, agentid)
     elif 'Access Denied' in r2.text:
-        print("🛑 Access Denied — 可能需要中转页token 或更完整headers")
+        msg = "55188 签到失败：🛑 Access Denied，可能需要中转页token"
+        print(msg)
+        send_wx(msg, corpid, corpsecret, agentid)
     else:
-        print("⚠️ 签到失败")
+        msg = "55188 签到失败：⚠️ 未知错误"
+        print(msg)
+        send_wx(msg, corpid, corpsecret, agentid)
 
 # 使用方式
 if __name__ == "__main__":
-    my_cookie = os.getenv("MY_COOKIE")
+    my_cookie = os.getenv("MY_COOKIE") or ""
     if not my_cookie:
         print("❌ 未检测到环境变量 MY_COOKIE，请设置后重试")
     else:
