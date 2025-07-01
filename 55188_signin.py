@@ -22,39 +22,35 @@ def sign_in(cookie_str):
     r1 = session.get("https://www.55188.com/plugin.php?id=sign")
     r1.encoding = r1.apparent_encoding
     html = r1.text
+    msg = ""    # 主状态
+    msg1 = ""   # 登录状态
+    msg2 = ""   # 签到前状态
 
     if '您好，游客！' in html or '安全验证' in html:
-        msg = "55188 签到通知：❌ 登录失效，请检查Cookie"
-        print(msg)
-        send_wx(msg, corpid, corpsecret, agentid)
-        return
-
-    print("✅ 登录成功")
-    signed = 'id="addsign"' not in html
-    if signed:
-        msg = "55188 签到通知：✅ 今天已签到，无需重复操作。"
-        print(msg)
-        send_wx(msg, corpid, corpsecret, agentid)
-        return
-
-    print("❌ 今天还未签到，准备签到...")
-    time.sleep(1)
-
-    r2 = session.get("https://www.55188.com/plugin.php?id=sign&mod=add&jump=1")
-    r2.encoding = r2.apparent_encoding
-
-    if 'success' in r2.text:
-        msg = "55188 签到通知：🎉 签到成功！"
-        print(msg)
-        send_wx(msg, corpid, corpsecret, agentid)
-    elif 'Access Denied' in r2.text:
-        msg = "55188 签到失败：🛑 Access Denied，可能需要中转页token"
-        print(msg)
-        send_wx(msg, corpid, corpsecret, agentid)
+        msg = "❌ 登录失效，请检查Cookie"
     else:
-        msg = "55188 签到失败：⚠️ 未知错误"
-        print(msg)
-        send_wx(msg, corpid, corpsecret, agentid)
+        msg1 = "✅ 登录成功\n"
+
+        if 'id="addsign"' not in html:
+            msg = "✅ 今天已签到，无需重复操作。"
+        else:
+            msg2 = "❌ 今天还未签到，准备签到...\n"
+            time.sleep(1)
+            r2 = session.get("https://www.55188.com/plugin.php?id=sign&mod=add&jump=1")
+            r2.encoding = r2.apparent_encoding
+
+            if 'success' in r2.text:
+                msg = "🎉 签到成功！"
+            elif 'Access Denied' in r2.text:
+                msg = "🛑 Access Denied，可能需要中转页token"
+            else:
+                msg = "⚠️ 未知错误"
+
+    # 最后统一输出和推送
+    full_msg = f"[55188] 签到结果：\n{msg1}{msg2}{msg}"
+    print(full_msg)
+    send_wx(full_msg, corpid, corpsecret, agentid)
+
 
 # 使用方式
 if __name__ == "__main__":
