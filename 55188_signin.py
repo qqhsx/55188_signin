@@ -3,9 +3,9 @@ import time
 import os
 from wx_msg import send_wx  # 导入推送函数
 
-corpid = os.getenv("WX_CORPID") or ""
-corpsecret = os.getenv("WX_CORPSECRET") or ""
-agentid = os.getenv("WX_AGENTID") or ""
+corpid = os.getenv("WX_CORPID") or "ww3f27d938d39d2801"
+corpsecret = os.getenv("WX_CORPSECRET") or "Qecy2ITn0KiFjg4qP09cKCFxfhsaUsDDa3BkLES9KyA"
+agentid = os.getenv("WX_AGENTID") or "1000003"
 
 def sign_in(cookie_str):
     session = requests.Session()
@@ -54,7 +54,7 @@ def sign_in(cookie_str):
 
 # 使用方式
 if __name__ == "__main__":
-    my_cookie = os.getenv("MY_COOKIE") or ""
+    my_cookie = os.getenv("MY_COOKIE") or "55188_passport=SXbe4stFuFx0eDQHro5%2BKcq3XiYmtOwpL9Yg%2FNVRZMm5SkeQ3%2F7vEZVb3KD3GoWCZHi8cRTHaVkozU0hqOikg%2BSJj2U3NoE5JZHppDdvE5dqxeblTyOoHbM0BEqBwc9P3OLl64mRdrKjO%2BqJ3SC%2BH3xcKU6%2FCvaKiivkknVaRA0%3D; passport2bbs=oKvtgy64BAAkWOBWuQxg04JPI2xzUdnlvXXMNIHPFRqlVpBlMROVZFvxoGtBsuWb; cdb2_auth=2Cqu1WSfVNNHetdTv03Y2GnwxQN8%2F5RaXlSphRuFc6RnSHUFF%2BuxUjq%2BVuCuq641Iw; vOVx_56cc_saltkey=mqSmYwy8; vOVx_56cc_lastvisit=1770249292; vOVx_56cc_auth=6139vxam%2FffuLpr3T9%2BH0saF7KwYmPmF6TjI3r3I8Oy4JtO1UBQKVXYbXCDk6dCyU6lPgyYvGrOTkLJXr%2BMZM5dp%2BWNi; vOVx_56cc_sid=zwAZSy; vOVx_56cc_lip=59.61.207.78%2C1770252892; vOVx_56cc_yfe_in=1; vOVx_56cc_pc_size_c=0; vOVx_56cc_ulastactivity=db17zuwjcO%2F%2Fk0jjJ5eTbHBBYeFNvKgDGTf0%2F%2BYFQWLZhOjmMQIV; vOVx_56cc_noticeTitle=1; vOVx_56cc_smile=3D1; vOVx_56cc_lastcheckfeed=4016791%7C1770252991; vOVx_56cc_plugin_sign_cookie=92211776edb93e2847e5c663c36d99e8; vOVx_56cc_lastact=1770253024%09home.php%09spacecp"
     if not my_cookie:
         print("❌ 未检测到环境变量 MY_COOKIE，请设置后重试")
     else:
