@@ -11,7 +11,7 @@ def sign_in(cookie_str):
     session = requests.Session()
     session.headers.update({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        "Referer": "http://55188.com/plugin.php?id=sign",
+        "Referer": "https://www.55188.com/plugin.php?id=sign",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9",
         "Accept-Language": "zh-CN,zh;q=0.9",
         "Accept-Encoding": "gzip, deflate, br",
@@ -19,7 +19,7 @@ def sign_in(cookie_str):
     })
     session.cookies.update(dict(i.strip().split("=", 1) for i in cookie_str.split(";") if "=" in i))
 
-    r1 = session.get("http://55188.com/plugin.php?id=sign")
+    r1 = session.get("https://www.55188.com/plugin.php?id=sign")
     r1.encoding = r1.apparent_encoding
     html = r1.text
     msg = ""    # 主状态
@@ -36,7 +36,7 @@ def sign_in(cookie_str):
         else:
             msg2 = "❌ 今天还未签到，准备签到...\n"
             time.sleep(1)
-            r2 = session.get("http://55188.com/plugin.php?id=sign&mod=add&jump=1")
+            r2 = session.get("https://www.55188.com/plugin.php?id=sign&mod=add&jump=1")
             r2.encoding = r2.apparent_encoding
 
             if 'success' in r2.text:
