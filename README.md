@@ -26,7 +26,7 @@
 
 → 点上方 Settings → 左侧 Secrets and variables → Actions→ 点 New repository secret：
 
-按下面格式填写
+### 按下面格式填写（支持多账号）
 
 Name: 
 ```
@@ -34,8 +34,12 @@ MY_COOKIE
 ```
 Secret: 
 ```
-粘贴刚才的 Cookie
+粘贴复制的 Cookie1如：55188_passport=sdiq%2B0C5xU%2BzldSgOgEbKkJB.....
+粘贴复制的 Cookie2如：55188_passport=1D3ATFGhD2CpPFZOpf5HE2xJ.....
+粘贴复制的 Cookie3
 ```
+一个 Cookie 一行
+
 ### 下面为企业微信消息推送（选填）
 
 1Name: 
