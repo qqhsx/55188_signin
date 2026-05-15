@@ -18,30 +18,50 @@
 
 复制整串 Cookie 值（“Cookie:”后的字符）
 
-示例：55188_passport=xxx; cdb2_auth=yyy; passport2bbs=zzz; ...
-
+示例：
+```
+55188_passport=xxx; cdb2_auth=yyy; passport2bbs=zzz; ...
+```
 回到你的 GitHub 仓库页面
 
 → 点上方 Settings → 左侧 Secrets and variables → Actions→ 点 New repository secret：
 
-Name: MY_COOKIE
+按下面格式填写
 
-Value: 粘贴刚才的 Cookie
-
+Name: 
+```
+MY_COOKIE
+```
+Secret: 
+```
+粘贴刚才的 Cookie
+```
 ### 下面为企业微信消息推送（选填）
 
-Name: WX_AGENTID
-
-Value:填你的企业微信应用ID
-
-Name: WX_CORPID
-
-Value:填你的企业微信ID
-
-Name: WX_CORPSECRET
-
-Value:填你的企业微信应用密钥
-
+1Name: 
+```
+WX_AGENTID
+```
+Secret:
+```
+填你的企业微信应用ID
+```
+2Name: 
+```
+WX_CORPID
+```
+Secret:
+```
+填你的企业微信ID
+```
+3Name: 
+```
+WX_CORPSECRET
+```
+Secret:
+```
+填你的企业微信应用密钥
+```
 
 ✅ 第三步：测试运行
 
