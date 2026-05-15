@@ -5,12 +5,30 @@ import re
 from datetime import datetime
 from wx_msg import send_wx
 
-corpid = os.getenv("WX_CORPID") or "ww3f27d938d39d2801"
-corpsecret = os.getenv("WX_CORPSECRET") or "Qecy2ITn0KiFjg4qP09cKCFxfhsaUsDDa3BkLES9KyA"
-agentid = os.getenv("WX_AGENTID") or "1000003"
+corpid = os.getenv("WX_CORPID") or ""
+corpsecret = os.getenv("WX_CORPSECRET") or ""
+agentid = os.getenv("WX_AGENTID") or ""
+
+
+def mask_username(username):
+    """
+    用户名脱敏
+    """
+
+    username = username.strip()
+
+    if len(username) <= 1:
+        return username
+
+    elif len(username) == 2:
+        return username[0] + "*"
+
+    else:
+        return username[0] + "*" * (len(username) - 2) + username[-1:]
 
 
 def sign_in(cookie_str, index=1):
+
     session = requests.Session()
 
     session.headers.update({
@@ -52,6 +70,9 @@ def sign_in(cookie_str, index=1):
             username = m.group(1).strip()
             break
 
+    # 用户名脱敏
+    username_show = mask_username(username)
+
     msg = ""
     msg1 = ""
     msg2 = ""
@@ -91,7 +112,7 @@ def sign_in(cookie_str, index=1):
 
     full_msg = f"""[55188] 签到结果
 
-👤 账号：{username}
+👤 账号：{username_show}
 🕒 时间：{now}
 
 {msg1}{msg2}{msg}
@@ -111,13 +132,19 @@ if __name__ == "__main__":
         print("❌ 未检测到环境变量 MY_COOKIE，请设置后重试")
 
     else:
-        cookie_list = [c.strip() for c in cookies.split("\n") if c.strip()]
+
+        cookie_list = [
+            c.strip()
+            for c in cookies.split("\n")
+            if c.strip()
+        ]
 
         for idx, cookie in enumerate(cookie_list, start=1):
 
             print(f"\n========== 开始处理账号 {idx} ==========\n")
 
             try:
+
                 sign_in(cookie, idx)
 
             except Exception as e:
