@@ -3,9 +3,9 @@ import time
 import os
 from wx_msg import send_wx  # 导入推送函数
 
-corpid = os.getenv("WX_CORPID") or "ww3f27d938d39d2801"
-corpsecret = os.getenv("WX_CORPSECRET") or "Qecy2ITn0KiFjg4qP09cKCFxfhsaUsDDa3BkLES9KyA"
-agentid = os.getenv("WX_AGENTID") or "1000003"
+corpid = os.getenv("WX_CORPID") or ""
+corpsecret = os.getenv("WX_CORPSECRET") or ""
+agentid = os.getenv("WX_AGENTID") or ""
 
 def sign_in(cookie_str):
     session = requests.Session()
