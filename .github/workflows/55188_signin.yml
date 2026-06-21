@@ -2,30 +2,105 @@ name: Auto Sign-in for BBS
 
 on:
   schedule:
-    - cron: '00 16 * * *'  # 每天上午8点运行
-  workflow_dispatch:  # 允许手动触发
+    - cron: '00 23 * * *'     # UTC 23:00，北京时间早上7点（夏令时可能是8点）
+  workflow_dispatch:
 
 jobs:
+
   sign_in_job:
+
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+
+        uses: actions/setup-python@v5
+
         with:
-          python-version: '3.x'
+
+          python-version: '3.11'
+
+      - name: Show Python Version
+
+        run: |
+
+          python --version
+
+          which python
+
+      # ======================================
+      # 网络诊断
+      # ======================================
+
+      - name: Network Diagnose
+
+        run: |
+
+          echo "========================================"
+          echo "Runner Public IP"
+          echo "========================================"
+
+          curl -s ifconfig.me || true
+
+          echo ""
+          curl -s ipinfo.io/ip || true
+
+          echo ""
+
+          echo "========================================"
+          echo "DNS"
+          echo "========================================"
+
+          nslookup www.55188.com || true
+
+          echo ""
+
+          ping -c 4 www.55188.com || true
+
+          echo ""
+
+          echo "========================================"
+          echo "Curl Home"
+          echo "========================================"
+
+          curl -I -L --connect-timeout 10 --max-time 20 \
+          https://www.55188.com || true
+
+          echo ""
+
+          echo "========================================"
+          echo "Curl Sign"
+          echo "========================================"
+
+          curl -I -L --connect-timeout 10 --max-time 20 \
+          "https://www.55188.com/plugin.php?id=sign" || true
+
+          echo ""
 
       - name: Install dependencies
+
         run: |
+
+          python -m pip install --upgrade pip
+
           pip install requests
 
       - name: Run sign-in script
+
         env:
+
           MY_COOKIE: ${{ secrets.MY_COOKIE }}
+
           WX_CORPID: ${{ secrets.WX_CORPID }}
+
           WX_CORPSECRET: ${{ secrets.WX_CORPSECRET }}
+
           WX_AGENTID: ${{ secrets.WX_AGENTID }}
-        run: python 55188_signin.py  # 脚本名
+
+        run: |
+
+          python 55188_signin.py
