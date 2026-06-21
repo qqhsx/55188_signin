@@ -2,41 +2,71 @@ import requests
 import time
 import os
 import re
+import socket
+import traceback
 from datetime import datetime
 from wx_msg import send_wx
+
 
 corpid = os.getenv("WX_CORPID") or ""
 corpsecret = os.getenv("WX_CORPSECRET") or ""
 agentid = os.getenv("WX_AGENTID") or ""
 
 
+# =========================
+# 请求增强：重试 + 超时分类
+# =========================
+def safe_get(session, url, desc="", retry=3, timeout=20):
+
+    for i in range(retry):
+
+        try:
+            print(f"[REQUEST] {desc} 第{i+1}次 -> {url}")
+
+            return session.get(url, timeout=timeout)
+
+        except requests.exceptions.SSLError as e:
+            print(f"[SSL ERROR] {desc}: {e}")
+
+        except requests.exceptions.ConnectTimeout as e:
+            print(f"[CONNECT TIMEOUT] {desc}: {e}")
+
+        except requests.exceptions.ReadTimeout as e:
+            print(f"[READ TIMEOUT] {desc}: {e}")
+
+        except requests.exceptions.ConnectionError as e:
+            print(f"[CONNECTION ERROR] {desc}: {e}")
+
+        except Exception as e:
+            print(f"[UNKNOWN ERROR] {desc}: {e}")
+
+        time.sleep(2 * (i + 1))
+
+    raise Exception(f"[FAILED] {desc} 多次重试失败 -> {url}")
+
+
 def mask_username(username):
-    """
-    用户名脱敏
-    """
 
     username = username.strip()
 
     if len(username) <= 1:
         return username
-
     elif len(username) == 2:
         return username[0] + "*"
-
     else:
-        return username[0] + "*" * (len(username) - 2) + username[-1:]
+        return username[0] + "*" * (len(username) - 2) + username[-1]
 
 
 def sign_in(cookie_str, index=1):
+
+    print("\n" + "=" * 60)
+    print(f"[START] 账号 {index}")
 
     session = requests.Session()
 
     session.headers.update({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
         "Referer": "https://www.55188.com/plugin.php?id=sign",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9",
-        "Accept-Language": "zh-CN,zh;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
         "Connection": "keep-alive",
     })
 
@@ -48,18 +78,71 @@ def sign_in(cookie_str, index=1):
         )
     )
 
-    r1 = session.get("https://www.55188.com/plugin.php?id=sign")
-    r1.encoding = r1.apparent_encoding
-    html = r1.text
+    # =========================
+    # DNS
+    # =========================
+    try:
+        ip = socket.gethostbyname("www.55188.com")
+        print(f"[DNS] www.55188.com -> {ip}")
+    except Exception:
+        print("[DNS ERROR]")
+        traceback.print_exc()
 
-    # 获取用户名
+    # =========================
+    # 首页（可失败）
+    # =========================
+    try:
+        home = safe_get(
+            session,
+            "https://www.55188.com",
+            desc="HOME"
+        )
+
+        print(f"[HOME] STATUS -> {home.status_code}")
+
+    except Exception as e:
+        print("[HOME FAILED BUT CONTINUE]")
+        print(e)
+
+    # =========================
+    # 签到页（核心）
+    # =========================
+    try:
+        r1 = safe_get(
+            session,
+            "https://www.55188.com/plugin.php?id=sign",
+            desc="SIGN PAGE"
+        )
+
+        print(f"[SIGN] STATUS -> {r1.status_code}")
+
+        r1.encoding = r1.apparent_encoding
+        html = r1.text
+
+    except Exception as e:
+
+        err = traceback.format_exc()
+
+        send_wx(
+            f"""[55188] 签到失败
+
+账号：{index}
+
+{err}
+""",
+            corpid,
+            corpsecret,
+            agentid
+        )
+        return
+
+    # =========================
+    # 用户名
+    # =========================
     username = f"账号{index}"
 
     patterns = [
         r'您好：([^<]+)</a>',
-        r'uid=\d+[^>]*>([^<]+)</a>',
-        r'space-uid-\d+[^>]*>([^<]+)</a>',
-        r'title="访问我的空间"[^>]*>([^<]+)</a>',
         r'欢迎您回来，([^<]+)<',
         r'欢迎您，([^<]+)<',
     ]
@@ -70,95 +153,81 @@ def sign_in(cookie_str, index=1):
             username = m.group(1).strip()
             break
 
-    # 用户名脱敏
     username_show = mask_username(username)
 
+    # =========================
+    # 状态判断
+    # =========================
     msg = ""
-    msg1 = ""
-    msg2 = ""
 
-    # 登录检测
-    if '您好，游客！' in html or '安全验证' in html:
-        msg = "❌ 登录失效，请检查Cookie"
+    if "游客" in html or "安全验证" in html:
+        msg = "❌ Cookie失效"
 
     else:
-        msg1 = "✅ 登录成功\n"
 
-        # 是否已签到
         if 'id="addsign"' not in html:
-            msg = "✅ 今天已签到，无需重复操作。"
-
+            msg = "✅ 今日已签到"
         else:
-            msg2 = "❌ 今天还未签到，准备签到...\n"
 
-            time.sleep(1)
+            try:
 
-            r2 = session.get(
-                "https://www.55188.com/plugin.php?id=sign&mod=add&jump=1"
-            )
+                r2 = safe_get(
+                    session,
+                    "https://www.55188.com/plugin.php?id=sign&mod=add&jump=1",
+                    desc="SIGN ACTION"
+                )
 
-            r2.encoding = r2.apparent_encoding
+                if "success" in r2.text:
+                    msg = "🎉 签到成功"
+                elif "Access Denied" in r2.text:
+                    msg = "🛑 Access Denied"
+                else:
+                    msg = "⚠️ 未知返回"
 
-            if 'success' in r2.text:
-                msg = "🎉 签到成功！"
-
-            elif 'Access Denied' in r2.text:
-                msg = "🛑 Access Denied，可能需要中转页token"
-
-            else:
-                msg = "⚠️ 未知错误"
+            except Exception:
+                msg = "❌ 签到失败"
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    full_msg = f"""[55188] 签到结果
+    result = f"""
+[55188] 签到结果
 
-👤 账号：{username_show}
-🕒 时间：{now}
+账号：{username_show}
+时间：{now}
 
-{msg1}{msg2}{msg}
+{msg}
 """
 
-    print(full_msg)
+    print(result)
 
-    send_wx(full_msg, corpid, corpsecret, agentid)
+    send_wx(result, corpid, corpsecret, agentid)
 
 
 if __name__ == "__main__":
 
-    # 多账号：每行一个 Cookie
     cookies = os.getenv("MY_COOKIE") or ""
 
     if not cookies.strip():
-        print("❌ 未检测到环境变量 MY_COOKIE，请设置后重试")
+        print("❌ 未检测到 MY_COOKIE")
+        exit()
 
-    else:
+    cookie_list = [c.strip() for c in cookies.split("\n") if c.strip()]
 
-        cookie_list = [
-            c.strip()
-            for c in cookies.split("\n")
-            if c.strip()
-        ]
+    for i, cookie in enumerate(cookie_list, 1):
 
-        for idx, cookie in enumerate(cookie_list, start=1):
+        try:
+            sign_in(cookie, i)
 
-            print(f"\n========== 开始处理账号 {idx} ==========\n")
+        except Exception:
+            err = traceback.format_exc()
 
-            try:
+            print(err)
 
-                sign_in(cookie, idx)
+            send_wx(
+                f"[55188] 全局异常\n账号{i}\n\n{err}",
+                corpid,
+                corpsecret,
+                agentid
+            )
 
-            except Exception as e:
-
-                err_msg = f"""[55188] 签到异常
-
-👤 账号：账号{idx}
-
-❌ 错误：
-{str(e)}
-"""
-
-                print(err_msg)
-
-                send_wx(err_msg, corpid, corpsecret, agentid)
-
-            time.sleep(2)
+        time.sleep(2)
