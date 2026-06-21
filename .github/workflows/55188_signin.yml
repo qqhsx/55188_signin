@@ -2,13 +2,11 @@ name: Auto Sign-in for BBS
 
 on:
   schedule:
-    - cron: '00 23 * * *'     # UTC 23:00，北京时间早上7点（夏令时可能是8点）
+    - cron: '00 23 * * *'
   workflow_dispatch:
 
 jobs:
-
   sign_in_job:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -16,91 +14,55 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-
-        uses: actions/setup-python@v5
-
-        with:
-
-          python-version: '3.11'
-
-      - name: Show Python Version
-
+      # ================================
+      # 🔥 强制修复 DNS（关键）
+      # ================================
+      - name: Fix DNS
         run: |
+          echo "===== BEFORE DNS ====="
+          cat /etc/resolv.conf
 
-          python --version
+          echo "===== SET DNS ====="
+          sudo rm -f /etc/resolv.conf
 
-          which python
+          echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+          echo "nameserver 1.1.1.1" | sudo tee -a /etc/resolv.conf
 
-      # ======================================
-      # 网络诊断
-      # ======================================
+          echo "===== AFTER DNS ====="
+          cat /etc/resolv.conf
 
-      - name: Network Diagnose
-
+      # ================================
+      # 环境信息
+      # ================================
+      - name: Network Check
         run: |
-
-          echo "========================================"
-          echo "Runner Public IP"
-          echo "========================================"
-
+          echo "Runner IP:"
           curl -s ifconfig.me || true
 
           echo ""
-          curl -s ipinfo.io/ip || true
-
-          echo ""
-
-          echo "========================================"
-          echo "DNS"
-          echo "========================================"
-
+          echo "DNS Test:"
           nslookup www.55188.com || true
 
-          echo ""
-
-          ping -c 4 www.55188.com || true
-
-          echo ""
-
-          echo "========================================"
-          echo "Curl Home"
-          echo "========================================"
-
-          curl -I -L --connect-timeout 10 --max-time 20 \
-          https://www.55188.com || true
-
-          echo ""
-
-          echo "========================================"
-          echo "Curl Sign"
-          echo "========================================"
-
-          curl -I -L --connect-timeout 10 --max-time 20 \
-          "https://www.55188.com/plugin.php?id=sign" || true
-
-          echo ""
+      # ================================
+      # Python
+      # ================================
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
       - name: Install dependencies
-
         run: |
-
           python -m pip install --upgrade pip
-
           pip install requests
 
+      # ================================
+      # Run script
+      # ================================
       - name: Run sign-in script
-
         env:
-
           MY_COOKIE: ${{ secrets.MY_COOKIE }}
-
           WX_CORPID: ${{ secrets.WX_CORPID }}
-
           WX_CORPSECRET: ${{ secrets.WX_CORPSECRET }}
-
           WX_AGENTID: ${{ secrets.WX_AGENTID }}
-
-        run: |
-
-          python 55188_signin.py
+        run: python 55188_signin.py
