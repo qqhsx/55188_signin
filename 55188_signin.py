@@ -8,43 +8,49 @@ from datetime import datetime
 from wx_msg import send_wx
 
 
+# =========================
+# 配置：改成 IP 直连
+# =========================
+TARGET_IP = "1.13.12.71"
+BASE_HOST = "www.55188.com"
+
+BASE_URL = f"https://{TARGET_IP}"
+
+
 corpid = os.getenv("WX_CORPID") or ""
 corpsecret = os.getenv("WX_CORPSECRET") or ""
 agentid = os.getenv("WX_AGENTID") or ""
 
 
 # =========================
-# 请求增强：重试 + 超时分类
+# 安全请求
 # =========================
-def safe_get(session, url, desc="", retry=3, timeout=20):
+def safe_get(session, url, desc="", retry=3):
 
     for i in range(retry):
 
         try:
             print(f"[REQUEST] {desc} 第{i+1}次 -> {url}")
 
-            return session.get(url, timeout=timeout)
-
-        except requests.exceptions.SSLError as e:
-            print(f"[SSL ERROR] {desc}: {e}")
-
-        except requests.exceptions.ConnectTimeout as e:
-            print(f"[CONNECT TIMEOUT] {desc}: {e}")
-
-        except requests.exceptions.ReadTimeout as e:
-            print(f"[READ TIMEOUT] {desc}: {e}")
-
-        except requests.exceptions.ConnectionError as e:
-            print(f"[CONNECTION ERROR] {desc}: {e}")
+            return session.get(
+                url,
+                timeout=20,
+                verify=False,   # 🔥 关键：忽略证书
+                headers={
+                    "Host": BASE_HOST  # 🔥 关键：伪装域名
+                }
+            )
 
         except Exception as e:
-            print(f"[UNKNOWN ERROR] {desc}: {e}")
+            print(f"[ERROR] {desc}: {e}")
+            time.sleep(2 * (i + 1))
 
-        time.sleep(2 * (i + 1))
-
-    raise Exception(f"[FAILED] {desc} 多次重试失败 -> {url}")
+    raise Exception(f"{desc} 请求失败")
 
 
+# =========================
+# 用户名脱敏
+# =========================
 def mask_username(username):
 
     username = username.strip()
@@ -57,6 +63,9 @@ def mask_username(username):
         return username[0] + "*" * (len(username) - 2) + username[-1]
 
 
+# =========================
+# 签到逻辑
+# =========================
 def sign_in(cookie_str, index=1):
 
     print("\n" + "=" * 60)
@@ -66,7 +75,7 @@ def sign_in(cookie_str, index=1):
 
     session.headers.update({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        "Referer": "https://www.55188.com/plugin.php?id=sign",
+        "Referer": f"{BASE_URL}/plugin.php?id=sign",
         "Connection": "keep-alive",
     })
 
@@ -79,57 +88,42 @@ def sign_in(cookie_str, index=1):
     )
 
     # =========================
-    # DNS
+    # DNS skip（直接IP）
     # =========================
-    try:
-        ip = socket.gethostbyname("www.55188.com")
-        print(f"[DNS] www.55188.com -> {ip}")
-    except Exception:
-        print("[DNS ERROR]")
-        traceback.print_exc()
+    print(f"[INFO] 使用IP直连: {TARGET_IP}")
 
     # =========================
-    # 首页（可失败）
+    # 首页
     # =========================
     try:
-        home = safe_get(
+        r_home = safe_get(
             session,
-            "https://www.55188.com",
+            f"{BASE_URL}",
             desc="HOME"
         )
-
-        print(f"[HOME] STATUS -> {home.status_code}")
+        print("[HOME] STATUS:", r_home.status_code)
 
     except Exception as e:
-        print("[HOME FAILED BUT CONTINUE]")
-        print(e)
+        print("[HOME FAILED BUT CONTINUE]", e)
 
     # =========================
-    # 签到页（核心）
+    # 签到页
     # =========================
     try:
         r1 = safe_get(
             session,
-            "https://www.55188.com/plugin.php?id=sign",
+            f"{BASE_URL}/plugin.php?id=sign",
             desc="SIGN PAGE"
         )
-
-        print(f"[SIGN] STATUS -> {r1.status_code}")
 
         r1.encoding = r1.apparent_encoding
         html = r1.text
 
-    except Exception as e:
-
+    except Exception:
         err = traceback.format_exc()
 
         send_wx(
-            f"""[55188] 签到失败
-
-账号：{index}
-
-{err}
-""",
+            f"[55188] 签到失败\n\n{err}",
             corpid,
             corpsecret,
             agentid
@@ -156,43 +150,39 @@ def sign_in(cookie_str, index=1):
     username_show = mask_username(username)
 
     # =========================
-    # 状态判断
+    # 判断
     # =========================
-    msg = ""
-
-    if "游客" in html or "安全验证" in html:
+    if "游客" in html:
         msg = "❌ Cookie失效"
 
+    elif 'id="addsign"' not in html:
+        msg = "✅ 今日已签到"
+
     else:
+        try:
+            r2 = safe_get(
+                session,
+                f"{BASE_URL}/plugin.php?id=sign&mod=add&jump=1",
+                desc="SIGN ACTION"
+            )
 
-        if 'id="addsign"' not in html:
-            msg = "✅ 今日已签到"
-        else:
+            if "success" in r2.text:
+                msg = "🎉 签到成功"
+            elif "Access Denied" in r2.text:
+                msg = "🛑 Access Denied"
+            else:
+                msg = "⚠️ 未知结果"
 
-            try:
-
-                r2 = safe_get(
-                    session,
-                    "https://www.55188.com/plugin.php?id=sign&mod=add&jump=1",
-                    desc="SIGN ACTION"
-                )
-
-                if "success" in r2.text:
-                    msg = "🎉 签到成功"
-                elif "Access Denied" in r2.text:
-                    msg = "🛑 Access Denied"
-                else:
-                    msg = "⚠️ 未知返回"
-
-            except Exception:
-                msg = "❌ 签到失败"
+        except Exception:
+            msg = "❌ 签到失败"
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     result = f"""
-[55188] 签到结果
+[55188] 签到结果（IP直连模式）
 
 账号：{username_show}
+IP：{TARGET_IP}
 时间：{now}
 
 {msg}
@@ -203,12 +193,15 @@ def sign_in(cookie_str, index=1):
     send_wx(result, corpid, corpsecret, agentid)
 
 
+# =========================
+# main
+# =========================
 if __name__ == "__main__":
 
     cookies = os.getenv("MY_COOKIE") or ""
 
     if not cookies.strip():
-        print("❌ 未检测到 MY_COOKIE")
+        print("❌ 未检测到 COOKIE")
         exit()
 
     cookie_list = [c.strip() for c in cookies.split("\n") if c.strip()]
